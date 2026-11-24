@@ -17,7 +17,10 @@ extension ChromeLauncher {
         let open = profiles.filter { isRunning($0.id) }
         if !open.isEmpty { bringToFront(open, exe: exe) }
 
-        let toStart = profiles.filter { !isRunning($0.id) }
+        updater.reloadVersion()
+        let closed = profiles.map(\.id).filter { !isRunning($0) }
+        store.syncUserAgents(closed, chromeMajor: chromeMajor)
+        let toStart = closed.compactMap(store.profile)
         guard !toStart.isEmpty else { return }
         let frames = tile ? WindowLayout.grid(count: toStart.count) : []
 
@@ -104,30 +107,42 @@ extension ChromeLauncher {
     /// Asks Chrome to quit normally so tabs, history, cookies and cache are written
     /// to disk. A frozen profile is resumed first: a paused Chrome cannot quit.
     func stop(_ ids: [UUID]) {
+        Task { @MainActor in await quit(ids) }
+    }
+
+    /// Closes open profiles and starts them again, e.g. on an updated Chrome.
+    /// Their tabs come back; profiles that did not close are left alone.
+    func restart(_ ids: [UUID], tile: Bool) {
+        Task { @MainActor in
+            await quit(ids)
+            let closed = ids.filter { !isRunning($0) }.compactMap { store?.profile($0) }
+            if !closed.isEmpty { launch(closed, tile: tile) }
+        }
+    }
+
+    private func quit(_ ids: [UUID]) async {
         let targets = ids.compactMap { id in running[id].map { (id: id, pid: $0) } }
         guard !targets.isEmpty else { return }
         setFrozen(targets.map(\.id), false)
 
-        Task { @MainActor in
-            try? await Task.sleep(nanoseconds: 300_000_000)
-            for t in targets {
-                if let app = NSRunningApplication(processIdentifier: t.pid), app.terminate() { continue }
-                kill(t.pid, SIGTERM)
-            }
-            // Wait up to 20 s for a clean exit. Never force-kill: that loses data.
-            for _ in 0..<40 {
-                try? await Task.sleep(nanoseconds: 500_000_000)
-                refresh()
-                if targets.allSatisfy({ running[$0.id] == nil }) { break }
-            }
-            let stuck = targets.filter { running[$0.id] != nil }
-                .compactMap { store?.profile($0.id)?.name }
-            if !stuck.isEmpty {
-                lastError = "Не закрылись: \(stuck.joined(separator: ", ")). "
-                    + "Chrome, возможно, ждёт ответа в своём окне (например, о незавершённой загрузке)."
-            }
-            sampleUsage()
+        try? await Task.sleep(nanoseconds: 300_000_000)
+        for t in targets {
+            if let app = NSRunningApplication(processIdentifier: t.pid), app.terminate() { continue }
+            kill(t.pid, SIGTERM)
         }
+        // Wait up to 20 s for a clean exit. Never force-kill: that loses data.
+        for _ in 0..<40 {
+            try? await Task.sleep(nanoseconds: 500_000_000)
+            refresh()
+            if targets.allSatisfy({ running[$0.id] == nil }) { break }
+        }
+        let stuck = targets.filter { running[$0.id] != nil }
+            .compactMap { store?.profile($0.id)?.name }
+        if !stuck.isEmpty {
+            lastError = "Не закрылись: \(stuck.joined(separator: ", ")). "
+                + "Chrome, возможно, ждёт ответа в своём окне (например, о незавершённой загрузке)."
+        }
+        sampleUsage()
     }
 
     func stopAll() { stop(Array(running.keys)) }

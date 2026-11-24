@@ -13,7 +13,10 @@ final class ChromeLauncher: ObservableObject {
     @Published var lastError: String?
 
     let chromeApp: URL?
-    let chromeVersion: String
+    /// Installed Chrome version and automatic updates.
+    let updater: ChromeUpdater
+    /// Open profiles still running an older Chrome than the installed one.
+    @Published private(set) var outdated: Set<UUID> = []
 
     internal weak var store: ProfileStore?
     internal var processes: [UUID: Process] = [:]
@@ -28,8 +31,7 @@ final class ChromeLauncher: ObservableObject {
 
     init() {
         chromeApp = Self.locateChrome()
-        let info = chromeApp.flatMap { Bundle(url: $0)?.infoDictionary }
-        chromeVersion = info?["CFBundleShortVersionString"] as? String ?? "?"
+        updater = ChromeUpdater(chromeApp: chromeApp)
         NotificationCenter.default.addObserver(
             forName: NSApplication.willTerminateNotification, object: nil, queue: .main
         ) { [weak self] _ in
@@ -40,7 +42,7 @@ final class ChromeLauncher: ObservableObject {
 
     /// Major version used to build user agents that match the real engine.
     var chromeMajor: String {
-        let m = chromeVersion.split(separator: ".").first.map(String.init) ?? ""
+        let m = updater.installedVersion.split(separator: ".").first.map(String.init) ?? ""
         return Int(m) != nil ? m : "157"
     }
 
@@ -129,6 +131,10 @@ final class ChromeLauncher: ObservableObject {
         if now != running { running = now }
         let stillFrozen = frozen.filter { now[$0] != nil }
         if stillFrozen != frozen { frozen = stillFrozen }
+        let old = Set(now.keys.filter { id in
+            Self.startedVersion(store.dataDir(for: id)).map { $0 != updater.installedVersion } ?? false
+        })
+        if old != outdated { outdated = old }
         badges.update(running: now, profiles: store.profiles, frozen: frozen)
     }
 
@@ -140,7 +146,21 @@ final class ChromeLauncher: ObservableObject {
         guard let target = try? FileManager.default.destinationOfSymbolicLink(atPath: path),
               let last = target.split(separator: "-").last,
               let pid = pid_t(last), pid > 0,
-              kill(pid, 0) == 0 else { return nil }
+              kill(pid, 0) == 0, isChrome(pid) else { return nil }
         return pid
+    }
+
+    /// After a crash or reboot the lock stays and its pid may belong to another program,
+    /// which must never be treated (frozen, closed) as a profile.
+    private static func isChrome(_ pid: pid_t) -> Bool {
+        var buf = [CChar](repeating: 0, count: 4096)
+        guard proc_pidpath(pid, &buf, UInt32(buf.count)) > 0 else { return true }
+        let path = String(cString: buf)
+        return path.hasSuffix("/Google Chrome") || path.hasSuffix("/Chromium")
+    }
+
+    /// Chrome writes its version to this file when it starts.
+    static func startedVersion(_ dir: URL) -> String? {
+        (try? String(contentsOf: dir.appendingPathComponent("Last Version"), encoding: .utf8))?.trimmed
     }
 }

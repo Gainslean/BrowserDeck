@@ -41,6 +41,14 @@ with per-profile settings and does not use a modified browser engine.
   gets up to 20 seconds to exit on its own and is never force-killed. This gives
   Chrome time to save history, cookies and the session.
 
+**Chrome updates**
+- BrowserDeck asks Google's own updater to check for a new Chrome at start and every
+  6 hours, and to install it. This can be turned off in the Chrome menu in the status bar.
+- Open profiles keep their old version until restarted. The same menu restarts them
+  on the new one, and their tabs come back.
+- At launch, the Chrome version in a profile's User-Agent is raised to the installed
+  one. This can be turned off per profile.
+
 **Low memory and CPU use**
 - Three modes per profile:
 
@@ -110,7 +118,8 @@ auto-freeze depend on it. Quit with ⌘Q. Quitting resumes any frozen profiles.
 | Chrome data | `~/Library/Application Support/BrowserDeck/Profiles/<id>/` |
 | Chrome cache | `~/Library/Caches/BrowserDeck/Profiles/<id>/` |
 
-Nothing is sent anywhere. The app has no network code, telemetry or accounts.
+The app has no network code, telemetry or accounts of its own. Update checks are made
+by Google's updater, which is installed with Chrome.
 
 ## Limitations
 
@@ -147,6 +156,7 @@ Nothing is sent anywhere. The app has no network code, telemetry or accounts.
 | `Sources/ProfileControl.swift` | Launch, close, freeze |
 | `Sources/AutoFreezer.swift` | Auto-freeze of unused windows |
 | `Sources/WindowBadges.swift` | Profile name labels on Chrome windows |
+| `Sources/ChromeUpdater.swift`, `ChromeStatusView.swift` | Chrome updates and their status |
 | `Sources/Performance.swift` | Economy modes: flags and Chrome settings |
 | `Sources/ResourceMonitor.swift` | Memory and CPU of a profile's processes |
 | `Sources/Presets.swift` | User-Agent, language and time zone presets |

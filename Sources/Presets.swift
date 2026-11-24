@@ -11,7 +11,6 @@ enum Presets {
     /// Chrome sends a "reduced" user agent: only OS family and major version vary.
     /// Using the installed major keeps the UA consistent with the real engine.
     static func userAgents(chromeMajor v: String) -> [Preset] {
-        let prev = Int(v).map { String($0 - 1) } ?? v
         func tail(_ ver: String) -> String {
             "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/\(ver).0.0.0 Safari/537.36"
         }
@@ -22,8 +21,6 @@ enum Presets {
             Preset(label: "macOS · Chrome \(v)", value: "\(mac) \(tail(v))"),
             Preset(label: "Windows 10/11 · Chrome \(v)", value: "\(win) \(tail(v))"),
             Preset(label: "Linux · Chrome \(v)", value: "\(linux) \(tail(v))"),
-            Preset(label: "macOS · Chrome \(prev)", value: "\(mac) \(tail(prev))"),
-            Preset(label: "Windows 10/11 · Chrome \(prev)", value: "\(win) \(tail(prev))"),
         ]
     }
 

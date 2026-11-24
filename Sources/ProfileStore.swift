@@ -143,6 +143,15 @@ final class ProfileStore: ObservableObject {
         profiles = updated
     }
 
+    /// Raises the Chrome version in the profiles' user agents to the installed one.
+    func syncUserAgents(_ ids: [UUID], chromeMajor: String) {
+        var updated = profiles
+        for i in updated.indices where ids.contains(updated[i].id) && updated[i].syncUserAgent {
+            updated[i].userAgent = UserAgentVersion.updated(updated[i].userAgent, major: chromeMajor)
+        }
+        if updated != profiles { profiles = updated }
+    }
+
     /// Moves the profile folders to the Trash (recoverable) and forgets the profiles.
     func delete(_ ids: Set<UUID>) {
         let fm = FileManager.default

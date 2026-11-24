@@ -112,10 +112,11 @@ struct ContentView: View {
 
     private var statusBar: some View {
         HStack(spacing: 6) {
-            Circle()
-                .fill(launcher.chromeApp == nil ? Color.red : Color.green)
-                .frame(width: 7, height: 7)
-            Text(launcher.chromeApp == nil ? "Chrome не найден" : "Chrome \(launcher.chromeVersion)")
+            ChromeStatusView(updater: launcher.updater, chromeFound: launcher.chromeApp != nil,
+                             outdated: launcher.outdated.count,
+                             onRestartOutdated: {
+                                 launcher.restart(Array(launcher.outdated), tile: tileWindows)
+                             })
             Spacer()
             if launcher.totalMemoryMB > 0 {
                 Text(ProfileUsage.format(launcher.totalMemoryMB))

@@ -16,6 +16,7 @@ struct BrowserProfile: Identifiable, Codable, Hashable {
     var blockImages = false
     var tintWindow = true
     var autoFreeze = true
+    var syncUserAgent = true
     var notes = ""
     var createdAt = Date()
     var lastLaunched: Date?
@@ -40,6 +41,7 @@ struct BrowserProfile: Identifiable, Codable, Hashable {
         blockImages = try c.decodeIfPresent(Bool.self, forKey: .blockImages) ?? d.blockImages
         tintWindow = try c.decodeIfPresent(Bool.self, forKey: .tintWindow) ?? d.tintWindow
         autoFreeze = try c.decodeIfPresent(Bool.self, forKey: .autoFreeze) ?? d.autoFreeze
+        syncUserAgent = try c.decodeIfPresent(Bool.self, forKey: .syncUserAgent) ?? d.syncUserAgent
         notes = try c.decodeIfPresent(String.self, forKey: .notes) ?? d.notes
         createdAt = try c.decodeIfPresent(Date.self, forKey: .createdAt) ?? d.createdAt
         lastLaunched = try c.decodeIfPresent(Date.self, forKey: .lastLaunched)

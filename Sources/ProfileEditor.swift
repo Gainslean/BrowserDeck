@@ -30,6 +30,8 @@ struct ProfileEditor: View {
                 PresetField(title: "User-Agent", text: $profile.userAgent,
                             prompt: "как у установленного Chrome",
                             presets: Presets.userAgents(chromeMajor: chromeMajor))
+                Toggle("Обновлять версию Chrome в User-Agent", isOn: $profile.syncUserAgent)
+                    .help("При запуске номер версии в User-Agent становится таким же, как у установленного Chrome")
                 PresetField(title: "Язык", text: $profile.language,
                             prompt: "системный", presets: Presets.languages)
                 PresetField(title: "Часовой пояс", text: $profile.timezone,
